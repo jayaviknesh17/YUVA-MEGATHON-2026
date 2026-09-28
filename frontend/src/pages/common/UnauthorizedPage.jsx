@@ -2,7 +2,7 @@ import React from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { Button } from '../../components/ui/Button';
-import { ShieldAlert, Home, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, Home, ArrowLeft, LogIn } from 'lucide-react';
 import { ROLE_DEFAULT_ROUTES } from '../../utils/constants';
 
 export const UnauthorizedPage = () => {
@@ -18,10 +18,10 @@ export const UnauthorizedPage = () => {
       </div>
       <h2 className="text-2xl font-bold text-surface-50">Access Denied (403 Forbidden)</h2>
       <p className="text-xs text-surface-400 max-w-md leading-relaxed">
-        Your current role (<span className="text-brand-300 font-semibold">{user?.role || 'Guest'}</span>) does not possess server-side authorization to access this protected resource.
+        Your authenticated account (<span className="text-brand-300 font-semibold">{user?.role || 'Guest'}</span>) does not possess permission to access this protected area.
       </p>
-      <div className="p-3 bg-surface-900 border border-surface-800 rounded-xl text-[11px] text-surface-400">
-        Tip: Use the <span className="text-amber-400 font-semibold">Role Switcher</span> in the top-right navbar to test authorized roles (e.g. Super Admin for Timetable, Faculty for ODs).
+      <div className="p-3 bg-surface-900 border border-surface-800 rounded-xl text-[11px] text-surface-400 max-w-md">
+        Privilege enforcement is strictly verified on the backend server. To access administrative or faculty tools, authenticate with an authorized institutional account.
       </div>
       <div className="flex items-center gap-3 pt-2">
         <Button variant="outline" size="sm" onClick={() => navigate(-1)} iconLeft={ArrowLeft}>
@@ -30,6 +30,11 @@ export const UnauthorizedPage = () => {
         <Link to={userDashboard}>
           <Button variant="primary" size="sm" iconLeft={Home}>
             My Dashboard
+          </Button>
+        </Link>
+        <Link to="/login">
+          <Button variant="secondary" size="sm" iconLeft={LogIn}>
+            Switch Account
           </Button>
         </Link>
       </div>

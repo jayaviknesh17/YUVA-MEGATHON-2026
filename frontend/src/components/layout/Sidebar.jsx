@@ -3,7 +3,7 @@ import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { getNavigationItems } from '../../routes/navigationConfig';
 import { ROLES, FACULTY_SCOPES } from '../../utils/constants';
-import { X, Sparkles, GraduationCap, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { X, GraduationCap } from 'lucide-react';
 import { Badge } from '../ui/Badge';
 
 export const Sidebar = ({ isOpen, onClose }) => {
@@ -27,6 +27,9 @@ export const Sidebar = ({ isOpen, onClose }) => {
     [ROLES.CLUB_ADMIN]: 'warning',
     [ROLES.STUDENT]: 'success',
   };
+
+  const displayName = user?.full_name || user?.fullName || 'User';
+  const studentRA = user?.student_profile?.ra_number || user?.raNumber || null;
 
   return (
     <>
@@ -70,12 +73,12 @@ export const Sidebar = ({ isOpen, onClose }) => {
             <div className="flex items-center justify-between">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-surface-400">Active Scope</span>
               <Badge variant={roleVariants[user?.role] || 'brand'} size="sm" dot>
-                {roleLabels[user?.role] || user?.role}
+                {roleLabels[user?.role] || user?.role || 'Guest'}
               </Badge>
             </div>
-            <div className="mt-2 text-xs font-medium text-surface-200 truncate">{user?.fullName}</div>
-            {user?.raNumber && (
-              <div className="text-[10px] font-mono text-surface-400 mt-0.5">RA: {user.raNumber}</div>
+            <div className="mt-2 text-xs font-medium text-surface-200 truncate">{displayName}</div>
+            {studentRA && (
+              <div className="text-[10px] font-mono text-surface-400 mt-0.5">RA: {studentRA}</div>
             )}
           </div>
 
@@ -126,7 +129,7 @@ export const Sidebar = ({ isOpen, onClose }) => {
             <span>SQLite & RBAC Ready</span>
           </div>
           <p className="text-[10px] text-surface-500 leading-tight">
-            Phase 2 Arch Verified • Strict Server-Side Scope Protection
+            JWT Auth & Server-Side RBAC Active
           </p>
         </div>
       </aside>

@@ -1,51 +1,65 @@
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../hooks/useNotification';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
-import { DEMO_PERSONAS, ROLE_DEFAULT_ROUTES } from '../../utils/constants';
-import { Mail, Lock, Sparkles, ArrowRight, ShieldCheck } from 'lucide-react';
+import { SEED_CREDENTIALS, ROLE_DEFAULT_ROUTES } from '../../utils/constants';
+import { Mail, Lock, ArrowRight, ShieldCheck, Key, AlertCircle } from 'lucide-react';
 
 export const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const { login, switchDemoUser } = useAuth();
+  const [errorMessage, setErrorMessage] = useState('');
+  const { login, isLoading } = useAuth();
   const { success, error } = useNotification();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const handleLogin = async (e) => {
-    e.preventDefault();
-    if (!email || !password) {
-      error('Please provide both email and password.');
+    if (e) e.preventDefault();
+    setErrorMessage('');
+
+    if (!email.trim() || !password) {
+      const msg = 'Please enter both institutional email and password.';
+      setErrorMessage(msg);
+      error(msg);
       return;
     }
 
-    setIsLoading(true);
     try {
-      const res = await login(email, password);
-      success(`Welcome back, ${res.user.fullName}!`, 'Authenticated');
-      navigate(res.defaultRoute || '/');
+      const res = await login(email.trim(), password);
+      success(`Welcome back, ${res.user.full_name || res.user.fullName || 'User'}!`, 'Authenticated');
+      
+      const fromPath = location.state?.from?.pathname;
+      const targetRoute = fromPath && fromPath !== '/login' ? fromPath : res.defaultRoute;
+      navigate(targetRoute, { replace: true });
     } catch (err) {
-      error(err.message || 'Authentication failed. Please check your credentials.');
-    } finally {
-      setIsLoading(false);
+      const backendError = err.data?.detail || err.message || 'Invalid credentials or server unavailable.';
+      setErrorMessage(backendError);
+      error(backendError, 'Login Failed');
     }
   };
 
-  const handleQuickPersonaSelect = (persona) => {
-    switchDemoUser(persona.email);
-    success(`Logged in as ${persona.name} (${persona.badge})`, 'Demo Persona Selected');
-    navigate(ROLE_DEFAULT_ROUTES[persona.role]);
+  const handleSelectSeedCredential = (cred) => {
+    setEmail(cred.email);
+    setPassword('Password123!');
+    setErrorMessage('');
   };
 
   return (
     <div>
       <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-surface-50 tracking-tight">Sign in to your account</h2>
-        <p className="text-xs text-surface-400 mt-1">Access your campus club portal, events & OD records</p>
+        <h2 className="text-xl font-bold text-surface-50 tracking-tight">Sign in to YUVA Hub</h2>
+        <p className="text-xs text-surface-400 mt-1">Campus Club Management & Event Operations Platform</p>
       </div>
+
+      {errorMessage && (
+        <div className="mb-4 p-3 rounded-xl bg-rose-950/40 border border-rose-500/30 text-xs text-rose-300 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 flex-shrink-0 mt-0.5 text-rose-400" />
+          <div className="flex-1">{errorMessage}</div>
+        </div>
+      )}
 
       <form onSubmit={handleLogin} className="space-y-4">
         <Input
@@ -56,6 +70,7 @@ export const LoginPage = () => {
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           required
+          autoComplete="email"
         />
 
         <Input
@@ -66,46 +81,49 @@ export const LoginPage = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           required
+          autoComplete="current-password"
         />
 
         <div className="flex items-center justify-between text-xs">
           <label className="flex items-center gap-2 text-surface-300 cursor-pointer">
             <input type="checkbox" className="rounded bg-surface-900 border-surface-700 text-brand-600 focus:ring-brand-500" />
-            <span>Remember me</span>
+            <span>Remember session</span>
           </label>
           <Link to="/forgot-password" className="text-brand-400 hover:text-brand-300 font-medium">
             Forgot password?
           </Link>
         </div>
 
-        <Button type="submit" variant="primary" className="w-full" isLoading={isLoading} iconRight={ArrowRight}>
-          Sign In
+        <Button type="submit" variant="primary" className="w-full shadow-glow" isLoading={isLoading} iconRight={ArrowRight}>
+          Authenticate Session
         </Button>
       </form>
 
-      {/* Quick 1-Click Demo Personas for Evaluation */}
-      <div className="mt-8 pt-6 border-t border-surface-800">
-        <div className="flex items-center justify-between mb-3">
+      {/* Seed Account Quick-Fill Helper (Fills credentials and passes through real backend login) */}
+      <div className="mt-8 pt-6 border-t border-surface-800/80">
+        <div className="flex items-center justify-between mb-2.5">
           <span className="text-[11px] font-semibold text-surface-400 uppercase tracking-wider flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            Quick Demo Login (Evaluation)
+            <Key className="w-3.5 h-3.5 text-brand-400" />
+            Seed Demo Accounts
           </span>
-          <span className="text-[10px] text-surface-500">1-click switch</span>
+          <span className="text-[10px] text-surface-500 font-mono">Password: Password123!</span>
         </div>
+        <p className="text-[11px] text-surface-400 mb-3">
+          Click any persona to fill official seed credentials, then authenticate via real backend API:
+        </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {DEMO_PERSONAS.map((p) => (
+        <div className="grid grid-cols-2 gap-2">
+          {SEED_CREDENTIALS.map((cred) => (
             <button
-              key={p.email}
+              key={cred.email}
               type="button"
-              onClick={() => handleQuickPersonaSelect(p)}
-              className="p-2.5 text-left rounded-xl bg-surface-900/90 hover:bg-surface-800 border border-surface-800/80 hover:border-brand-500/40 transition-all text-xs group"
+              onClick={() => handleSelectSeedCredential(cred)}
+              className={`p-2 rounded-xl bg-surface-900 hover:bg-surface-850 border transition-all text-left text-xs ${
+                email === cred.email ? 'border-brand-500/60 bg-brand-950/20' : 'border-surface-800/80 hover:border-surface-700'
+              }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-surface-200 group-hover:text-brand-300">{p.badge}</span>
-                <span className="text-[10px] text-brand-400">Login →</span>
-              </div>
-              <p className="text-[11px] text-surface-400 mt-0.5 truncate">{p.name}</p>
+              <div className="font-semibold text-surface-200 text-[11px] truncate">{cred.badge}</div>
+              <div className="text-[10px] text-surface-400 font-mono truncate">{cred.email}</div>
             </button>
           ))}
         </div>

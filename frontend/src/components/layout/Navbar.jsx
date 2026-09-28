@@ -1,50 +1,45 @@
 import React, { useState } from 'react';
 import {
   Bell,
-  Search,
   LogOut,
   User,
   Shield,
-  Layers,
-  Sparkles,
   ChevronDown,
   Menu,
-  Check,
+  CheckCircle2,
 } from 'lucide-react';
 import { useAuth } from '../../hooks/useAuth';
 import { useNotification } from '../../hooks/useNotification';
-import { DEMO_PERSONAS, ROLES, FACULTY_SCOPES } from '../../utils/constants';
+import { ROLES, FACULTY_SCOPES } from '../../utils/constants';
 import { Dropdown, DropdownItem, DropdownDivider } from '../ui/Dropdown';
 import { Badge } from '../ui/Badge';
 
 export const Navbar = ({ onToggleSidebar }) => {
-  const { user, logout, switchDemoUser, activeFacultyScope, switchFacultyScope } = useAuth();
+  const { user, logout, activeFacultyScope, switchFacultyScope } = useAuth();
   const { unreadCount, info } = useNotification();
   const [showNotifications, setShowNotifications] = useState(false);
 
   const mockNotifications = [
     {
       id: 1,
-      title: 'Event Approved',
-      message: 'Your Hackathon 2026 registration is confirmed.',
-      time: '10m ago',
+      title: 'Session Authenticated',
+      message: 'Logged in successfully with active JWT session.',
+      time: 'Just now',
       read: false,
     },
     {
       id: 2,
-      title: 'OD Status Updated',
-      message: 'OD application for AI Symposium was approved by Class Mentor.',
+      title: 'Timetable Sync Active',
+      message: 'Campus timetable structures are verified by Super Admin.',
       time: '1h ago',
       read: false,
     },
-    {
-      id: 3,
-      title: 'New Dynamic Role Assigned',
-      message: 'You were assigned as "Technical Lead" in CodeCraft Club.',
-      time: '3h ago',
-      read: true,
-    },
   ];
+
+  const displayName = user?.full_name || user?.fullName || 'User';
+  const displayEmail = user?.email || '';
+  const displayRole = user?.role ? user.role.replace('_', ' ') : 'Guest';
+  const studentRA = user?.student_profile?.ra_number || user?.raNumber || null;
 
   return (
     <header className="sticky top-0 z-30 h-16 glass-panel border-b border-surface-800/80 px-4 sm:px-6 flex items-center justify-between">
@@ -94,46 +89,12 @@ export const Navbar = ({ onToggleSidebar }) => {
 
       {/* Right Actions */}
       <div className="flex items-center gap-3">
-        {/* Quick Persona Switcher for Hackathon Evaluation */}
-        <Dropdown
-          align="right"
-          trigger={
-            <button className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-900 hover:bg-surface-800 text-xs font-medium text-surface-200 border border-surface-700/80 transition-all hover:border-brand-500/40">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400 animate-pulse" />
-              <span className="hidden md:inline">Role Switcher:</span>
-              <span className="text-brand-400 font-semibold">{user?.role?.replace('_', ' ')}</span>
-              <ChevronDown className="w-3.5 h-3.5 text-surface-400" />
-            </button>
-          }
-        >
-          <div className="px-3 py-2 border-b border-surface-800">
-            <p className="text-[11px] font-semibold text-surface-300 uppercase tracking-wider">
-              Switch Demo Persona
-            </p>
-            <p className="text-[10px] text-surface-400 mt-0.5">Instant role switching for demo evaluation</p>
-          </div>
-          {DEMO_PERSONAS.map((p) => {
-            const isCurrent = user?.email === p.email;
-            return (
-              <DropdownItem
-                key={p.email}
-                onClick={() => {
-                  switchDemoUser(p.email);
-                  info(`Switched to ${p.name} (${p.badge})`, 'Demo Persona Changed');
-                }}
-                className={isCurrent ? 'bg-brand-500/10 text-brand-300' : ''}
-              >
-                <div className="flex items-center justify-between w-full">
-                  <div>
-                    <div className="font-semibold text-xs text-surface-200">{p.name}</div>
-                    <div className="text-[10px] text-surface-400">{p.description}</div>
-                  </div>
-                  {isCurrent && <Check className="w-4 h-4 text-brand-400 ml-2" />}
-                </div>
-              </DropdownItem>
-            );
-          })}
-        </Dropdown>
+        {/* Active Role Badge */}
+        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-900/80 border border-surface-800 text-xs">
+          <span className="w-2 h-2 rounded-full bg-cyber-emerald animate-pulse" />
+          <span className="text-surface-400">Role:</span>
+          <span className="text-brand-300 font-bold">{displayRole}</span>
+        </div>
 
         {/* Notification Bell */}
         <div className="relative">
@@ -177,12 +138,12 @@ export const Navbar = ({ onToggleSidebar }) => {
           trigger={
             <button className="flex items-center gap-2.5 p-1.5 rounded-xl hover:bg-surface-800 transition-colors">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-brand-600 to-violet-500 flex items-center justify-center text-white text-xs font-bold shadow-sm">
-                {user?.fullName?.charAt(0) || 'U'}
+                {displayName.charAt(0)}
               </div>
               <div className="hidden sm:block text-left">
-                <div className="text-xs font-semibold text-surface-100 leading-tight">{user?.fullName}</div>
+                <div className="text-xs font-semibold text-surface-100 leading-tight">{displayName}</div>
                 <div className="text-[10px] text-surface-400 font-mono">
-                  {user?.raNumber || user?.role?.replace('_', ' ')}
+                  {studentRA || displayRole}
                 </div>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-surface-400 hidden sm:block" />
@@ -190,11 +151,11 @@ export const Navbar = ({ onToggleSidebar }) => {
           }
         >
           <div className="px-3.5 py-2.5 border-b border-surface-800">
-            <p className="text-xs font-semibold text-surface-100">{user?.fullName}</p>
-            <p className="text-[11px] text-surface-400 truncate">{user?.email}</p>
-            {user?.raNumber && (
+            <p className="text-xs font-semibold text-surface-100">{displayName}</p>
+            <p className="text-[11px] text-surface-400 truncate">{displayEmail}</p>
+            {studentRA && (
               <p className="text-[10px] font-mono text-brand-400 mt-1 bg-brand-950/60 px-1.5 py-0.5 rounded border border-brand-500/20 inline-block">
-                RA: {user.raNumber}
+                RA: {studentRA}
               </p>
             )}
           </div>

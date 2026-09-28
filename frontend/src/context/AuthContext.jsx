@@ -1,130 +1,133 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { ROLES, FACULTY_SCOPES, STORAGE_KEYS, DEMO_PERSONAS, ROLE_DEFAULT_ROUTES } from '../utils/constants';
+import { ROLES, FACULTY_SCOPES, STORAGE_KEYS, ROLE_DEFAULT_ROUTES } from '../utils/constants';
 import authService from '../services/authService';
 
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
-  // Default to a rich demo student session or stored token/user
-  const [user, setUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEYS.AUTH_USER);
-      if (stored) return JSON.parse(stored);
-    } catch {
-      // ignore
-    }
-    // Default initial mock session: Student 1 for seamless navigation
-    return {
-      id: 5,
-      email: 'aarav@yuva.edu',
-      fullName: 'Aarav Patel',
-      role: ROLES.STUDENT,
-      raNumber: 'RA2311003010001',
-      department: 'Computer Science & Engineering',
-      section: 'Sec-A',
-      semester: 6,
-      avatarUrl: null,
-    };
-  });
-
-  const [token, setToken] = useState(() => {
-    return localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || 'mock-dev-jwt-token';
-  });
-
+  const [user, setUser] = useState(null);
+  const [token, setToken] = useState(() => localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN) || null);
   const [activeFacultyScope, setActiveFacultyScope] = useState(() => {
     return localStorage.getItem(STORAGE_KEYS.ACTIVE_FACULTY_SCOPE) || FACULTY_SCOPES.CLUB_COORDINATOR;
   });
+  const [isLoading, setIsLoading] = useState(true);
 
-  const [isLoading, setIsLoading] = useState(false);
-
-  // Sync token to storage
+  // Initialize and verify user session on mount
   useEffect(() => {
-    if (token) {
-      localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
-    }
-  }, [token]);
+    let isMounted = true;
 
-  // Sync user to storage
-  useEffect(() => {
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.AUTH_USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.AUTH_USER);
-    }
-  }, [user]);
+    const restoreSession = async () => {
+      const storedAccessToken = localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN);
+      const storedRefreshToken = localStorage.getItem(STORAGE_KEYS.REFRESH_TOKEN);
 
-  // Listen for unauthorized 401 events from API client
-  useEffect(() => {
-    const handleUnauthorized = () => {
-      logout();
+      if (!storedAccessToken && !storedRefreshToken) {
+        if (isMounted) {
+          setUser(null);
+          setIsLoading(false);
+        }
+        return;
+      }
+
+      try {
+        // Try fetching current user profile with active access token
+        const currentUser = await authService.getCurrentUser();
+        if (isMounted && currentUser) {
+          setUser(currentUser);
+          setToken(localStorage.getItem(STORAGE_KEYS.AUTH_TOKEN));
+        }
+      } catch (err) {
+        // If 401 and refresh token exists, try refreshing token
+        if (storedRefreshToken) {
+          try {
+            const tokenData = await authService.refreshToken(storedRefreshToken);
+            if (tokenData?.access_token) {
+              const refreshedUser = await authService.getCurrentUser();
+              if (isMounted && refreshedUser) {
+                setUser(refreshedUser);
+                setToken(tokenData.access_token);
+              }
+            }
+          } catch {
+            if (isMounted) {
+              await authService.logout();
+              setUser(null);
+              setToken(null);
+            }
+          }
+        } else {
+          if (isMounted) {
+            await authService.logout();
+            setUser(null);
+            setToken(null);
+          }
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     };
-    window.addEventListener('yuva:unauthorized', handleUnauthorized);
-    return () => window.removeEventListener('yuva:unauthorized', handleUnauthorized);
+
+    restoreSession();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Listen for centralized session events
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setUser(null);
+      setToken(null);
+      setIsLoading(false);
+    };
+
+    const handleTokenRefreshed = (e) => {
+      if (e.detail?.access_token) {
+        setToken(e.detail.access_token);
+      }
+    };
+
+    window.addEventListener('yuva:session_expired', handleSessionExpired);
+    window.addEventListener('yuva:token_refreshed', handleTokenRefreshed);
+
+    return () => {
+      window.removeEventListener('yuva:session_expired', handleSessionExpired);
+      window.removeEventListener('yuva:token_refreshed', handleTokenRefreshed);
+    };
   }, []);
 
   const login = useCallback(async (email, password) => {
     setIsLoading(true);
     try {
-      // If mock demo persona matches email, log in with demo data
-      const matchedPersona = DEMO_PERSONAS.find((p) => p.email.toLowerCase() === email.toLowerCase());
-      if (matchedPersona) {
-        const demoUser = {
-          id: matchedPersona.role === ROLES.SUPER_ADMIN ? 1 : matchedPersona.role === ROLES.ADMIN ? 2 : matchedPersona.role === ROLES.CLUB_ADMIN ? 4 : matchedPersona.role === ROLES.FACULTY ? 3 : 5,
-          email: matchedPersona.email,
-          fullName: matchedPersona.name,
-          role: matchedPersona.role,
-          raNumber: matchedPersona.raNumber || null,
-          title: matchedPersona.title,
-          department: 'Computer Science & Engineering',
-          section: 'Sec-A',
-        };
-        setUser(demoUser);
-        setToken(`mock-jwt-token-for-${demoUser.role.toLowerCase()}`);
-        setIsLoading(false);
-        return { user: demoUser, defaultRoute: ROLE_DEFAULT_ROUTES[demoUser.role] };
+      const authResponse = await authService.login(email, password);
+      
+      let authenticatedUser = authResponse?.user;
+      if (!authenticatedUser) {
+        authenticatedUser = await authService.getCurrentUser();
       }
 
-      // Try actual backend API call
-      const res = await authService.login(email, password);
-      setUser(res.user);
-      setToken(res.access_token);
+      setUser(authenticatedUser);
+      setToken(authResponse.access_token);
       setIsLoading(false);
-      return { user: res.user, defaultRoute: ROLE_DEFAULT_ROUTES[res.user.role] };
+
+      const targetRoute = ROLE_DEFAULT_ROUTES[authenticatedUser.role] || '/student/dashboard';
+      return { user: authenticatedUser, defaultRoute: targetRoute };
     } catch (err) {
       setIsLoading(false);
       throw err;
     }
   }, []);
 
-  const logout = useCallback(() => {
-    authService.logout();
-    setUser(null);
-    setToken(null);
-  }, []);
-
-  // Quick switcher for hackathon evaluation and testing all 5 roles instantly
-  const switchDemoUser = useCallback((personaEmail) => {
-    const matchedPersona = DEMO_PERSONAS.find((p) => p.email === personaEmail);
-    if (!matchedPersona) return;
-
-    const switchedUser = {
-      id: matchedPersona.role === ROLES.SUPER_ADMIN ? 1 : matchedPersona.role === ROLES.ADMIN ? 2 : matchedPersona.role === ROLES.CLUB_ADMIN ? 4 : matchedPersona.role === ROLES.FACULTY ? 3 : 5,
-      email: matchedPersona.email,
-      fullName: matchedPersona.name,
-      role: matchedPersona.role,
-      raNumber: matchedPersona.raNumber || null,
-      title: matchedPersona.title,
-      department: 'Computer Science & Engineering',
-      section: 'Sec-A',
-    };
-
-    setUser(switchedUser);
-    setToken(`mock-jwt-token-for-${switchedUser.role.toLowerCase()}`);
-    if (matchedPersona.role === ROLES.FACULTY) {
-      setActiveFacultyScope(FACULTY_SCOPES.CLUB_COORDINATOR);
-      localStorage.setItem(STORAGE_KEYS.ACTIVE_FACULTY_SCOPE, FACULTY_SCOPES.CLUB_COORDINATOR);
+  const logout = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      await authService.logout();
+    } finally {
+      setUser(null);
+      setToken(null);
+      setIsLoading(false);
     }
   }, []);
 
@@ -151,7 +154,6 @@ export const AuthProvider = ({ children }) => {
         activeFacultyScope,
         login,
         logout,
-        switchDemoUser,
         switchFacultyScope,
         hasRole,
       }}

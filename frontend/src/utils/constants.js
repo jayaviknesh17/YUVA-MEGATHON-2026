@@ -1,6 +1,6 @@
 /**
  * YUVA Platform Constant Definitions
- * Aligned with Phase 2 Approved Architecture
+ * Aligned with Phase 2 Approved Architecture & Phase 3A-4/5 Auth Integration
  */
 
 export const ROLES = {
@@ -42,62 +42,18 @@ export const ROLE_DEFAULT_ROUTES = {
 };
 
 export const STORAGE_KEYS = {
-  AUTH_TOKEN: 'yuva_auth_token',
+  AUTH_TOKEN: 'yuva_access_token',
+  REFRESH_TOKEN: 'yuva_refresh_token',
   AUTH_USER: 'yuva_auth_user',
   ACTIVE_FACULTY_SCOPE: 'yuva_faculty_active_scope',
 };
 
-// Demo Seed Accounts for Instant Verification and Evaluation
-export const DEMO_PERSONAS = [
-  {
-    role: ROLES.SUPER_ADMIN,
-    name: 'Dr. A. Sharma',
-    email: 'superadmin@yuva.edu',
-    title: 'Super Administrator',
-    description: 'Master Timetable Control & System Config',
-    badge: 'Super Admin',
-  },
-  {
-    role: ROLES.ADMIN,
-    name: 'Prof. R. Nair',
-    email: 'admin@yuva.edu',
-    title: 'Dean Student Affairs (Admin)',
-    description: 'Club Governance & Platform Analytics',
-    badge: 'Admin',
-  },
-  {
-    role: ROLES.FACULTY,
-    name: 'Dr. Meera Krishnan',
-    email: 'faculty@yuva.edu',
-    title: 'Faculty Lead (Dual Scope)',
-    description: 'Club Coordinator (Coding Club) & Class Mentor (Sec-A)',
-    badge: 'Faculty',
-    defaultScope: FACULTY_SCOPES.CLUB_COORDINATOR,
-  },
-  {
-    role: ROLES.CLUB_ADMIN,
-    name: 'Kavya S.',
-    email: 'clubadmin@yuva.edu',
-    title: 'President, CodeCraft Club',
-    description: 'Event Creation, Membership & Dynamic Roles',
-    badge: 'Club Admin',
-  },
-  {
-    role: ROLES.STUDENT,
-    name: 'Aarav Patel',
-    email: 'aarav@yuva.edu',
-    raNumber: 'RA2311003010001',
-    title: 'Student (Section A)',
-    description: 'Event Registrations, OD Application, Certificates',
-    badge: 'Student 1',
-  },
-  {
-    role: ROLES.STUDENT,
-    name: 'Diya Menon',
-    email: 'diya@yuva.edu',
-    raNumber: 'RA2311003010002',
-    title: 'Student & Tech Lead (Sec A)',
-    description: 'Dynamic Club Role & Regular Student workflow',
-    badge: 'Student 2',
-  },
+// Seed credentials helper for login reference
+export const SEED_CREDENTIALS = [
+  { role: ROLES.SUPER_ADMIN, email: 'superadmin@yuva.edu', label: 'Super Admin', badge: 'Super Admin' },
+  { role: ROLES.ADMIN, email: 'admin@yuva.edu', label: 'Dean / Admin', badge: 'Admin' },
+  { role: ROLES.FACULTY, email: 'faculty@yuva.edu', label: 'Dr. Meera Krishnan', badge: 'Faculty' },
+  { role: ROLES.CLUB_ADMIN, email: 'clubadmin@yuva.edu', label: 'Kavya S. (CodeCraft)', badge: 'Club Admin' },
+  { role: ROLES.STUDENT, email: 'aarav@yuva.edu', label: 'Aarav Patel (RA2311003010001)', badge: 'Student 1' },
+  { role: ROLES.STUDENT, email: 'diya@yuva.edu', label: 'Diya Menon (RA2311003010002)', badge: 'Student 2' },
 ];
