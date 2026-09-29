@@ -1,0 +1,26 @@
+# Import all models here so Base has metadata attached for migrations/table creation
+from app.db.base_class import Base  # noqa: F401
+from app.models import (  # noqa: F401
+    User,
+    StudentProfile,
+    FacultyProfile,
+    Club,
+    ClubRole,
+    Permission,
+    ClubRolePermission,
+    ClubMembership,
+    ClassMentorAssignment,
+    Timetable,
+    TimetablePeriod,
+    Event,
+    EventRegistration,
+    ODRequest,
+    ODPeriodSnapshot,
+    EventAttendance,
+    Certificate,
+    Badge,
+    StudentBadge,
+    Notification,
+    AuditLog,
+    RefreshSession,
+)
